@@ -6,7 +6,6 @@ import math
 import requests
 from PIL import Image
 from io import BytesIO
-import cv2
 import numpy as np
 
 st.set_page_config(layout="wide")
@@ -83,26 +82,26 @@ if st_data and st_data.get("all_drawings"):
     image = Image.open(BytesIO(response.content))
     st.sidebar.image(image, caption=f"Satellite Image (Zoom: {zoom})")
 
-    image_cv = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
-    hsv = cv2.cvtColor(image_cv, cv2.COLOR_BGR2HSV)
+    image_np = np.array(image)
+    green_mask = (
+        (image_np[:, :, 1] > 100) &
+        (image_np[:, :, 1] > image_np[:, :, 0]) &
+        (image_np[:, :, 1] > image_np[:, :, 2])
+    )
 
-    lower_green = np.array([35, 40, 40])
-    upper_green = np.array([85, 255, 255])
-    mask = cv2.inRange(hsv, lower_green, upper_green)
-    green_pixels = np.count_nonzero(mask)
-    total_pixels = mask.shape[0] * mask.shape[1]
+    green_pixels = np.count_nonzero(green_mask)
+    total_pixels = green_mask.size
     green_ratio = green_pixels / total_pixels * 100
 
     st.sidebar.metric("🌿 Green Coverage", f"{green_ratio:.2f} %")
-    st.sidebar.image(mask, caption="Detected Green Areas (White)", clamp=True)
 
     # Heatmap points sampling
     heat_data = []
-    for y in range(0, mask.shape[0], 10):
-        for x in range(0, mask.shape[1], 10):
-            if mask[y, x] > 0:
-                lat = lat_max - (y / mask.shape[0]) * (lat_max - lat_min)
-                lon = lon_min + (x / mask.shape[1]) * (lon_max - lon_min)
+    for y in range(0, green_mask.shape[0], 10):
+        for x in range(0, green_mask.shape[1], 10):
+            if green_mask[y, x]:
+                lat = lat_max - (y / green_mask.shape[0]) * (lat_max - lat_min)
+                lon = lon_min + (x / green_mask.shape[1]) * (lon_max - lon_min)
                 heat_data.append([lat, lon])
 
     # Add heatmap to map

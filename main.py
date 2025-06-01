@@ -34,7 +34,7 @@ center = jump_locations[selected_city]
 m = folium.Map(location=center, zoom_start=12)
 
 # Add Draw tool (rectangle only, limit to single shape)
-Draw(
+draw_control = Draw(
     export=False,
     draw_options={
         "rectangle": {
@@ -48,7 +48,8 @@ Draw(
         "circlemarker": False
     },
     edit_options={"edit": False, "remove": True}
-).add_to(m)
+)
+draw_control.add_to(m)
 
 # Display the map
 st_data = st_folium(m, width=1200, height=800, key="map")
@@ -62,7 +63,8 @@ def calculate_zoom_level(lon_min, lat_min, lon_max, lat_max, image_width=640):
 
 # Show green area analysis
 if st_data and st_data.get("all_drawings"):
-    drawing = st_data["all_drawings"][0]
+    # Use only the last drawn shape (simulate single shape restriction)
+    drawing = st_data["all_drawings"][-1]
     coords = drawing["geometry"]["coordinates"][0]
     lons = [point[0] for point in coords]
     lats = [point[1] for point in coords]
@@ -71,7 +73,7 @@ if st_data and st_data.get("all_drawings"):
     st.sidebar.write("🗺️ Selected Area:")
     st.sidebar.write(bbox)
 
-    MAPBOX_TOKEN = "pk.eyJ1Ijoia3VrdXN5bnRheCIsImEiOiJjbWFkNHVpdHgwN3k4MmlzaWtpeHc5dmh4In0.xhrRYZR3tfl3d_mJoSqnbg"
+    MAPBOX_TOKEN = "YOUR_MAPBOX_TOKEN_HERE"  # Replace with your actual token
     lon_min, lat_min, lon_max, lat_max = bbox
     center_lon = (lon_min + lon_max) / 2
     center_lat = (lat_min + lat_max) / 2
@@ -107,12 +109,14 @@ if st_data and st_data.get("all_drawings"):
                         lon = lon_min + (x / green_mask.shape[1]) * (lon_max - lon_min)
                         heat_data.append([lat, lon])
 
-            # Add heatmap to map
+            # Add heatmap to the same map
             if heat_data:
                 HeatMap(heat_data, radius=8).add_to(m)
-                st_folium(m, width=1200, height=800, key="map_final")
 
         except Exception as e:
             st.error(f"Image decoding error: {e}")
     else:
         st.error("Failed to fetch satellite image from Mapbox.")
+
+    # Show the final map (with heatmap added)
+    st_folium(m, width=1200, height=800, key="map_final")

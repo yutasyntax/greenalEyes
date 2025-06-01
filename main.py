@@ -12,7 +12,7 @@ st.set_page_config(layout="wide")
 st.sidebar.title("GreenalEyes")
 
 # Sidebar: Jump to City + Analysis Display
-st.sidebar.title("🗺️ Jump to Region")
+st.sidebar.title("Jump to Region")
 jump_locations = {
     "Tokyo": [35.681236, 139.767125],
     "London": [51.5074, -0.1278],
@@ -30,11 +30,18 @@ jump_locations = {
 selected_city = st.sidebar.selectbox("Select a City:", list(jump_locations.keys()))
 center = jump_locations[selected_city]
 
-# Map setup (default: selected city)
+# Zoom level calculator from bbox
+def calculate_zoom_level(lon_min, lat_min, lon_max, lat_max, image_width=640):
+    bbox_width_deg = abs(lon_max - lon_min)
+    TILE_SIZE = 256
+    zoom = math.log2((360 * image_width) / (bbox_width_deg * TILE_SIZE))
+    return max(0, min(int(zoom), 20))
+
+# Placeholder map before drawing
 m = folium.Map(location=center, zoom_start=12)
 
-# Add Draw tool (rectangle only, limit to single shape)
-draw_control = Draw(
+# Add Draw tool (rectangle only, remove others automatically)
+Draw(
     export=False,
     draw_options={
         "rectangle": {
@@ -48,29 +55,20 @@ draw_control = Draw(
         "circlemarker": False
     },
     edit_options={"edit": False, "remove": True}
-)
-draw_control.add_to(m)
+).add_to(m)
 
-# Display the map
-st_data = st_folium(m, width=1200, height=800, key="map")
+# Display the map and get drawing data
+st_data = st_folium(m, width=1200, height=800, key="map_final", returned_objects=["all_drawings"])
 
-# Zoom level calculator from bbox
-def calculate_zoom_level(lon_min, lat_min, lon_max, lat_max, image_width=640):
-    bbox_width_deg = abs(lon_max - lon_min)
-    TILE_SIZE = 256
-    zoom = math.log2((360 * image_width) / (bbox_width_deg * TILE_SIZE))
-    return max(0, min(int(zoom), 20))
-
-# Show green area analysis
+# Show green area analysis if rectangle drawn
 if st_data and st_data.get("all_drawings"):
-    # Use only the last drawn shape (simulate single shape restriction)
-    drawing = st_data["all_drawings"][-1]
+    drawing = st_data["all_drawings"][-1]  # Only use the latest drawing
     coords = drawing["geometry"]["coordinates"][0]
     lons = [point[0] for point in coords]
     lats = [point[1] for point in coords]
     bbox = [min(lons), min(lats), max(lons), max(lats)]
 
-    st.sidebar.write("🗺️ Selected Area:")
+    st.sidebar.write("Selected Area:")
     st.sidebar.write(bbox)
 
     MAPBOX_TOKEN = "pk.eyJ1Ijoia3VrdXN5bnRheCIsImEiOiJjbWFkNHVpdHgwN3k4MmlzaWtpeHc5dmh4In0.xhrRYZR3tfl3d_mJoSqnbg"  # Replace with your actual token

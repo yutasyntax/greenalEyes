@@ -68,7 +68,7 @@ if st_data and st_data.get("all_drawings"):
     st.sidebar.write("Selected Area:")
     st.sidebar.write(bbox)
 
-    MAPBOX_TOKEN = "pk.eyJ1Ijoia3VrdXN5bnRheCIsImEiOiJjbWFkNHVpdHgwN3k4MmlzaWtpeHc5dmh4In0.xhrRYZR3tfl3d_mJoSqnbg"
+    MAPBOX_TOKEN = st.secrets["MAPBOX_TOKEN"]
     lon_min, lat_min, lon_max, lat_max = bbox
     center_lon = (lon_min + lon_max) / 2
     center_lat = (lat_min + lat_max) / 2

@@ -37,10 +37,7 @@ def calculate_zoom_level(lon_min, lat_min, lon_max, lat_max, image_width=640):
     zoom = math.log2((360 * image_width) / (bbox_width_deg * TILE_SIZE))
     return max(0, min(int(zoom), 20))
 
-# Persistent map placeholder (single display)
-if 'map_drawn' not in st.session_state:
-    st.session_state['map_drawn'] = False
-
+# Display the map with drawing tool
 m = folium.Map(location=center, zoom_start=12)
 
 Draw(
@@ -62,11 +59,6 @@ Draw(
 st_data = st_folium(m, width=1200, height=800, key="map_final", returned_objects=["all_drawings"])
 
 if st_data and st_data.get("all_drawings"):
-    # Remove old drawing state
-    if st.session_state['map_drawn']:
-        st.experimental_rerun()
-    st.session_state['map_drawn'] = True
-
     drawing = st_data["all_drawings"][-1]
     coords = drawing["geometry"]["coordinates"][0]
     lons = [point[0] for point in coords]

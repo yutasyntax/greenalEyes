@@ -1,7 +1,7 @@
 import streamlit as st
 from streamlit_folium import st_folium
 import folium
-from folium.plugins import Draw, HeatMap
+from folium.plugins import Draw
 import math
 import requests
 from PIL import Image
@@ -40,7 +40,7 @@ def calculate_zoom_level(lon_min, lat_min, lon_max, lat_max, image_width=640):
 # Placeholder map before drawing
 m = folium.Map(location=center, zoom_start=12)
 
-# Add Draw tool (rectangle only, remove others automatically)
+# Add Draw tool (rectangle only)
 Draw(
     export=False,
     draw_options={
@@ -71,7 +71,7 @@ if st_data and st_data.get("all_drawings"):
     st.sidebar.write("Selected Area:")
     st.sidebar.write(bbox)
 
-    MAPBOX_TOKEN = "pk.eyJ1Ijoia3VrdXN5bnRheCIsImEiOiJjbWFkNHVpdHgwN3k4MmlzaWtpeHc5dmh4In0.xhrRYZR3tfl3d_mJoSqnbg"  # Replace with your actual token
+    MAPBOX_TOKEN = "pk.eyJ1Ijoia3VrdXN5bnRheCIsImEiOiJjbWFkNHVpdHgwN3k4MmlzaWtpeHc5dmh4In0.xhrRYZR3tfl3d_mJoSqnbg"
     lon_min, lat_min, lon_max, lat_max = bbox
     center_lon = (lon_min + lon_max) / 2
     center_lat = (lat_min + lat_max) / 2
@@ -98,23 +98,10 @@ if st_data and st_data.get("all_drawings"):
             st.sidebar.metric("🌿 Green Coverage", f"{green_ratio:.2f} %")
             st.sidebar.image(green_mask.astype(np.uint8) * 255, caption="Detected Green Areas (White)", clamp=True)
 
-            # Heatmap points sampling
-            heat_data = []
-            for y in range(0, green_mask.shape[0], 10):
-                for x in range(0, green_mask.shape[1], 10):
-                    if green_mask[y, x]:
-                        lat = lat_max - (y / green_mask.shape[0]) * (lat_max - lat_min)
-                        lon = lon_min + (x / green_mask.shape[1]) * (lon_max - lon_min)
-                        heat_data.append([lat, lon])
-
-            # Add heatmap to the same map
-            if heat_data:
-                HeatMap(heat_data, radius=8).add_to(m)
-
         except Exception as e:
             st.error(f"Image decoding error: {e}")
     else:
         st.error("Failed to fetch satellite image from Mapbox.")
 
-    # Show the final map (with heatmap added)
+    # Show the final map again (without heatmap)
     st_folium(m, width=1200, height=800, key="map_final")

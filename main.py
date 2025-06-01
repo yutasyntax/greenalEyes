@@ -37,10 +37,12 @@ def calculate_zoom_level(lon_min, lat_min, lon_max, lat_max, image_width=640):
     zoom = math.log2((360 * image_width) / (bbox_width_deg * TILE_SIZE))
     return max(0, min(int(zoom), 20))
 
-# Placeholder map before drawing
+# Persistent map placeholder (single display)
+if 'map_drawn' not in st.session_state:
+    st.session_state['map_drawn'] = False
+
 m = folium.Map(location=center, zoom_start=12)
 
-# Add Draw tool (rectangle only)
 Draw(
     export=False,
     draw_options={
@@ -57,12 +59,15 @@ Draw(
     edit_options={"edit": False, "remove": True}
 ).add_to(m)
 
-# Display the map and get drawing data
 st_data = st_folium(m, width=1200, height=800, key="map_final", returned_objects=["all_drawings"])
 
-# Show green area analysis if rectangle drawn
 if st_data and st_data.get("all_drawings"):
-    drawing = st_data["all_drawings"][-1]  # Only use the latest drawing
+    # Remove old drawing state
+    if st.session_state['map_drawn']:
+        st.experimental_rerun()
+    st.session_state['map_drawn'] = True
+
+    drawing = st_data["all_drawings"][-1]
     coords = drawing["geometry"]["coordinates"][0]
     lons = [point[0] for point in coords]
     lats = [point[1] for point in coords]
@@ -102,6 +107,3 @@ if st_data and st_data.get("all_drawings"):
             st.error(f"Image decoding error: {e}")
     else:
         st.error("Failed to fetch satellite image from Mapbox.")
-
-    # Show the final map again (without heatmap)
-    st_folium(m, width=1200, height=800, key="map_final")

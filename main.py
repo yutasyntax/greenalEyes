@@ -35,7 +35,7 @@ m = folium.Map(location=center, zoom_start=12)
 
 # Add Draw tool (rectangle only, limit to single shape)
 Draw(
-    export=True,
+    export=False,
     draw_options={
         "rectangle": {
             "shapeOptions": {"color": "#ff0000"},
@@ -79,32 +79,40 @@ if st_data and st_data.get("all_drawings"):
     mapbox_url = f"https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/{center_lon},{center_lat},{zoom}/640x640?access_token={MAPBOX_TOKEN}"
 
     response = requests.get(mapbox_url)
-    image = Image.open(BytesIO(response.content))
-    st.sidebar.image(image, caption=f"Satellite Image (Zoom: {zoom})")
+    if response.status_code == 200:
+        try:
+            image = Image.open(BytesIO(response.content)).convert("RGB")
+            st.sidebar.image(image, caption=f"Satellite Image (Zoom: {zoom})")
 
-    image_np = np.array(image)
-    green_mask = (
-        (image_np[:, :, 1] > 100) &
-        (image_np[:, :, 1] > image_np[:, :, 0]) &
-        (image_np[:, :, 1] > image_np[:, :, 2])
-    )
+            image_np = np.array(image)
+            green_mask = (
+                (image_np[:, :, 1] > 100) &
+                (image_np[:, :, 1] > image_np[:, :, 0]) &
+                (image_np[:, :, 1] > image_np[:, :, 2])
+            )
 
-    green_pixels = np.count_nonzero(green_mask)
-    total_pixels = green_mask.size
-    green_ratio = green_pixels / total_pixels * 100
+            green_pixels = np.count_nonzero(green_mask)
+            total_pixels = green_mask.size
+            green_ratio = green_pixels / total_pixels * 100
 
-    st.sidebar.metric("🌿 Green Coverage", f"{green_ratio:.2f} %")
+            st.sidebar.metric("🌿 Green Coverage", f"{green_ratio:.2f} %")
+            st.sidebar.image(green_mask.astype(np.uint8) * 255, caption="Detected Green Areas (White)", clamp=True)
 
-    # Heatmap points sampling
-    heat_data = []
-    for y in range(0, green_mask.shape[0], 10):
-        for x in range(0, green_mask.shape[1], 10):
-            if green_mask[y, x]:
-                lat = lat_max - (y / green_mask.shape[0]) * (lat_max - lat_min)
-                lon = lon_min + (x / green_mask.shape[1]) * (lon_max - lon_min)
-                heat_data.append([lat, lon])
+            # Heatmap points sampling
+            heat_data = []
+            for y in range(0, green_mask.shape[0], 10):
+                for x in range(0, green_mask.shape[1], 10):
+                    if green_mask[y, x]:
+                        lat = lat_max - (y / green_mask.shape[0]) * (lat_max - lat_min)
+                        lon = lon_min + (x / green_mask.shape[1]) * (lon_max - lon_min)
+                        heat_data.append([lat, lon])
 
-    # Add heatmap to map
-    if heat_data:
-        HeatMap(heat_data, radius=8).add_to(m)
-        st_folium(m, width=1200, height=800, key="map_final")
+            # Add heatmap to map
+            if heat_data:
+                HeatMap(heat_data, radius=8).add_to(m)
+                st_folium(m, width=1200, height=800, key="map_final")
+
+        except Exception as e:
+            st.error(f"Image decoding error: {e}")
+    else:
+        st.error("Failed to fetch satellite image from Mapbox.")

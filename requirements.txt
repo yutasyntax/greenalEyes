@@ -1,0 +1,7 @@
+streamlit
+streamlit-folium
+folium
+opencv-python
+numpy
+Pillow
+requests
